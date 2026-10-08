@@ -8,12 +8,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v22 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v23 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v22
+     CURRENT VERSION: v23
      ════════════════════════════════════════════════
      CHANGELOG:
+     v23 - Applied clue-text box shares consistently in print and exported
+           puzzles; verified per-clue font sizes survive local save/reload.
      v22 - Fixed clue-box flex sizing: longer clues receive more of the cell,
            independent of font size, so auto-fit never shrinks their boxes.
      v21 - Added a clue-box fit checker with automatic font fitting,
@@ -224,7 +226,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v22 ▾</button>
+    title="Click for change history">v23 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -638,13 +640,18 @@ function firstAnswerTarget(dir,or,oc){
   return {r:or+dr,c:oc+dc,edge};
 }
 
+function clueBoxWeight(cl){
+  const length=Math.max(1,String(cl&&cl.clue||'?').trim().length);
+  return Math.sqrt(length);
+}
+
 function getAnswerArrowMarkers(r,c,grid=G,baseTextPx=textSizePx){
   const markers=[];
   for(let or=0;or<grid.length;or++){
     for(let oc=0;oc<(grid[or]||[]).length;oc++){
       const owner=grid[or][oc];
       if(owner.t!=='clue'||!Array.isArray(owner.clues)||!owner.clues.length)continue;
-      const weights=owner.clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:baseTextPx);
+      const weights=owner.clues.map(clueBoxWeight);
       const total=weights.reduce((sum,value)=>sum+value,0)||owner.clues.length;
       let consumed=0;
       owner.clues.forEach((cl,index)=>{
@@ -759,9 +766,7 @@ function makeTd(r,c,solve){
       const fs=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
       // Give longer clue text a larger share of the cell. Keep this independent
       // of fs so auto-fitting its font cannot make its own box smaller.
-      const clueLength=Math.max(1,(cl.clue||'?').trim().length);
-      const boxWeight=Math.sqrt(clueLength);
-      slot.style.flex=boxWeight+' 1 0';
+      slot.style.flex=clueBoxWeight(cl)+' 1 0';
       const txtDiv=document.createElement('div');txtDiv.className='slot-text';
       txtDiv.style.fontSize=fs+'px';
       txtDiv.textContent=cl.clue||'?';
@@ -897,10 +902,11 @@ function printPuzzle(){
           const gap=clues.length>1?0.6:0;
           const usableHeight=printCellSize-gap*(clues.length-1);
           const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:textSizePx);
-          const totalSize=sizes.reduce((sum,size)=>sum+size,0)||clues.length;
+          const weights=clues.map(clueBoxWeight);
+          const totalWeight=weights.reduce((sum,weight)=>sum+weight,0)||clues.length;
           let slotY=y;
           clues.forEach((cl,index)=>{
-            const slotHeight=usableHeight*(sizes[index]/totalSize);
+            const slotHeight=usableHeight*(weights[index]/totalWeight);
             if(index>0){
               svg.appendChild(svgNode('line',{
                 x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
@@ -2034,8 +2040,9 @@ function buildSolverHTML(data,title){
         cell.clues.forEach((cl,idx)=>{
           if(idx>0)inner+='<div class="clue-divider"></div>';
           const fs=(cl.textSize&&cl.textSize>0?cl.textSize:tSz);
+          const boxWeight=clueBoxWeight(cl);
           const txtH=`<div class="slot-text" style="font-size:${fs}px">${(cl.clue||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
-          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${fs} 1 0">${txtH}</div>`;
+          inner+=`<div class="clue-slot" data-r="${r}" data-c="${c}" data-ci="${idx}" style="flex:${boxWeight} 1 0">${txtH}</div>`;
         });
         tableRows+=`<td class="t-clue" style="${sz}"><div class="clue-inner">${inner}</div></td>`;
       } else if(cell.t==='answer'){
@@ -2574,6 +2581,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v23',notes:['Print and exported solver layouts now use the same clue-text-based box shares as the builder. Fitted font sizes are preserved through the local save/load path.']},
     {v:'v22',notes:['Fixed clue-box sizing: longer clue text gets a larger cell share, independent of font size, so auto-fitting cannot shrink the clue box and squeeze the clue further.']},
     {v:'v21',notes:['Added a clue-box fit checker that finds overflowing clue text, jumps to each affected clue, auto-fits or applies a chosen font size, and lets you ignore individual clues.']},
     {v:'v20',notes:['Merged celebration and rating modal — no skip button. Added optional comments field to completion modal. Added "Comment / Report" button in solver (orange). Separated comment types: Feedback, Bug reports, Rating comments. Updated admin dashboard to show all 3 comment types. Yellow stars in rating (default 5 stars). Updated delete-puzzles page to "Manage & Delete Puzzles" with rename functionality.']},
