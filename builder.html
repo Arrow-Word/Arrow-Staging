@@ -8,12 +8,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v21 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v22 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v21
+     CURRENT VERSION: v22
      ════════════════════════════════════════════════
      CHANGELOG:
+     v22 - Fixed clue-box flex sizing: longer clues receive more of the cell,
+           independent of font size, so auto-fit never shrinks their boxes.
      v21 - Added a clue-box fit checker with automatic font fitting,
            manual font sizing, and skip-and-continue review.
      v17 - Fixed cloud storage (JSONBin) not visible cross-device/browser.
@@ -78,8 +80,8 @@ td.t-clue:hover{background:#ddd0ee}
 td.t-answer{background:#eaf5e4;cursor:default;text-align:center;vertical-align:middle}
 /* clue cell layout */
 .clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
-/* each slot's flex-grow is set inline based on its text size so smaller-text
-   clues take less room and dividers re-flow automatically */
+/* Each slot's flex-grow is based on clue length, not font size. Changing a
+   clue's font therefore never takes space away from that clue's own box. */
 .clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
 /* arrow RIGHT of text (default) */
 .clue-slot.ap-right{flex-direction:row;align-items:center;justify-content:center}
@@ -222,7 +224,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v21 ▾</button>
+    title="Click for change history">v22 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -273,7 +275,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     </label>
   </div>
   <div class="info">
-    <strong>Add / edit clue:</strong> Click any empty or clue cell. In a clue cell you can add clues, edit existing ones, reorder them, or change per-clue text size. Clues with smaller text now take less room — leaving more space for other clues in the same cell. Use <strong>Check clue fit</strong> to review any text that overflows its box.<br>
+    <strong>Add / edit clue:</strong> Click any empty or clue cell. In a clue cell you can add clues, edit existing ones, reorder them, or change per-clue text size. Longer clues receive a larger share of their cell; changing font size does not resize the clue box. Use <strong>Check clue fit</strong> to review any text that overflows its box.<br>
     <strong>Black cell / Erase:</strong> Will confirm before deleting clues. To start a fresh puzzle (change grid size), go to the <strong>4. New Puzzle</strong> tab.
   </div>
   <div id="draft-banner" class="no-print" style="display:none;background:#e0f0ff;border:1px solid #99c0e0;color:#224466;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;align-items:center;gap:10px;flex-wrap:wrap">
@@ -755,8 +757,11 @@ function makeTd(r,c,solve){
       const slot=document.createElement('div');
       slot.className='clue-slot';
       const fs=cl.textSize&&cl.textSize>0?cl.textSize:textSizePx;
-      // FIX 1: flex-grow proportional to font size — smaller clues take less room
-      slot.style.flex=fs+' 1 0';
+      // Give longer clue text a larger share of the cell. Keep this independent
+      // of fs so auto-fitting its font cannot make its own box smaller.
+      const clueLength=Math.max(1,(cl.clue||'?').trim().length);
+      const boxWeight=Math.sqrt(clueLength);
+      slot.style.flex=boxWeight+' 1 0';
       const txtDiv=document.createElement('div');txtDiv.className='slot-text';
       txtDiv.style.fontSize=fs+'px';
       txtDiv.textContent=cl.clue||'?';
@@ -2569,6 +2574,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v22',notes:['Fixed clue-box sizing: longer clue text gets a larger cell share, independent of font size, so auto-fitting cannot shrink the clue box and squeeze the clue further.']},
     {v:'v21',notes:['Added a clue-box fit checker that finds overflowing clue text, jumps to each affected clue, auto-fits or applies a chosen font size, and lets you ignore individual clues.']},
     {v:'v20',notes:['Merged celebration and rating modal — no skip button. Added optional comments field to completion modal. Added "Comment / Report" button in solver (orange). Separated comment types: Feedback, Bug reports, Rating comments. Updated admin dashboard to show all 3 comment types. Yellow stars in rating (default 5 stars). Updated delete-puzzles page to "Manage & Delete Puzzles" with rename functionality.']},
     {v:'v19',notes:['Switched puzzle storage from GitHub to Supabase (no tokens needed). Published puzzles now managed in builder. Directory sorting (A-Z, Newest, Oldest). Favicon added. Sign-in required to solve. Sanity cleanup.']},
