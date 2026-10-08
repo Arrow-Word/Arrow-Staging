@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Admin Dashboard — Arrow Word Puzzles</title>
+<script src="staging-safety.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+#lock-screen{position:fixed;inset:0;background:#f5f0ff;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-box{background:#fff;border-radius:12px;border:1px solid #e0d8f0;padding:32px;width:360px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(119,68,187,0.12)}
+.lock-box h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:8px}
+.lock-box p{font-size:13px;color:#888;margin-bottom:20px}
+.lock-box input{width:100%;padding:10px 14px;font-size:15px;border:1px solid #bbb;border-radius:6px;margin-bottom:10px;text-align:center;letter-spacing:2px}
+.lock-box input:focus{outline:none;border-color:#7744bb}
+.lock-box button{width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
+#main{display:none;max-width:1100px;margin:0 auto;padding:24px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:18px;text-align:center}
+.stat-num{font-size:32px;font-weight:700;color:#7744bb}
+.stat-label{font-size:12px;color:#888;margin-top:4px}
+h2{font-size:18px;font-weight:700;color:#443366;margin-bottom:12px;margin-top:8px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0d8f0;margin-bottom:28px;font-size:13px}
+th{background:#7744bb;color:#fff;padding:10px 14px;text-align:left;font-size:13px;cursor:pointer;user-select:none}
+th:hover{background:#664299}
+th.sort-asc::after{content:' ▲';font-size:10px}
+th.sort-desc::after{content:' ▼';font-size:10px}
+td{padding:10px 14px;border-bottom:1px solid #f0ecff}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf8ff}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.b-complete{background:#d4edda;color:#155724}
+.b-progress{background:#fff3cd;color:#856404}
+.loading{color:#aaa;font-style:italic;padding:20px;text-align:center}
+.clear-section{background:#fff;border:1px solid #f4a8a8;border-radius:8px;padding:16px;margin-bottom:24px}
+.clear-section h3{font-size:14px;font-weight:700;color:#900;margin-bottom:8px}
+.btn-clear{background:#dc3545;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-clear:hover{background:#bb2d3b}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span> <span style="font-size:13px;opacity:0.7">Admin</span></a>
+  <a href="directory.html" style="color:#e8d8ff;font-size:13px;text-decoration:none">← Back to puzzles</a>
+</nav>
+
+<div id="lock-screen">
+  <div class="lock-box">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <h2>Admin Dashboard</h2>
+    <p>Enter password to view user stats</p>
+    <input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')checkPwd()">
+    <button onclick="checkPwd()">Enter</button>
+    <div id="pwd-err" style="color:#c00;font-size:12px;margin-top:8px;min-height:16px"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div class="stats-row" id="stats-row"><div class="loading">Loading stats…</div></div>
+  <h2>👥 Registered users</h2>
+  <table id="users-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Last active</th><th>Puzzles done</th></tr></thead>
+    <tbody><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
+  <h2>📊 Puzzle activity</h2>
+  <table id="activity-table">
+    <thead><tr><th>User</th><th>Puzzle</th><th>Status</th><th>Progress</th><th>%</th><th>Time spent</th><th>Rating</th><th>Checks used</th><th>Last saved</th></tr></thead>
+    <tbody><tr><td colspan="9" class="loading">Loading…</td></tr></tbody>
+  </table>
+
+  <h2>⭐ Puzzle ratings</h2>
+  <table id="ratings-table">
+    <thead><tr><th>Puzzle</th><th>Avg rating</th><th>Total ratings</th></tr></thead>
+    <tbody id="ratings-body"><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
+  </table>
+
+  <h2>💬 User feedback & bug reports</h2>
+  <table id="comments-table">
+    <thead><tr><th>Puzzle</th><th>User</th><th>Type</th><th>Comment</th><th>Date</th></tr></thead>
+    <tbody id="comments-body"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+  </table>
+  <hr style="border:none;border-top:2px solid #e0d8f0;margin:40px 0 24px">
+  <div class="clear-section" style="background:#e8f4ff;border-color:#6aade0">
+    <h3 style="color:#004a99">🔧 Manage puzzles</h3>
+    <p style="font-size:12px;color:#555;margin-bottom:10px">Edit titles or delete puzzles from the public directory.</p>
+    <a href="delete-puzzles.html" style="display:inline-block;background:#004a99;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;cursor:pointer">Go to Manage Puzzles →</a>
+  </div>
+
+</div>
+
+<script src="staging-auth.js"></script>
+<script src="cloud-storage.js?v=20260514"></script>
+<script>
+const ADMIN_PASSWORD = 'arrowword2024';
+
+function checkPwd(){
+  if(document.getElementById('pwd').value===ADMIN_PASSWORD){
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main').style.display='block';
+    loadStats();
+  } else {
+    document.getElementById('pwd-err').textContent='Incorrect password.';
+    document.getElementById('pwd').value='';
+  }
+}
+
+async function waitForSb(fn, attempts=30){
+  while(typeof fn==='undefined'&&attempts-->0) await new Promise(r=>setTimeout(r,200));
+}
+
+async function loadStats(){
+  // Wait for supabase-auth.js to initialise
+  let attempts=0;
+  while(typeof sbAdminGetAllProgress==='undefined'&&attempts++<30) await new Promise(r=>setTimeout(r,200));
+
+  try {
+    const [progress, users, puzzles, ratings, comments] = await Promise.all([
+      sbAdminGetAllProgress(),
+      sbAdminGetAllUsers(),
+      cloudGetPuzzles(),  // Get full puzzle data, not just index
+      sbAdminGetRatings().catch(()=>[]),
+      sbAdminGetAllComments().catch(()=>[])
+    ]);
+
+    const totalComplete = progress.filter(p=>p.complete).length;
+    const puzzleMap = {};
+    puzzles.forEach(p=>{puzzleMap[p.id]=p.title||p.id;});
+
+    // User puzzle counts
+    const userPuzzleCount = {};
+    progress.forEach(p=>{userPuzzleCount[p.user_id]=(userPuzzleCount[p.user_id]||0)+1;});
+
+    // Stats cards
+    document.getElementById('stats-row').innerHTML=`
+      <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Registered users</div></div>
+      <div class="stat-card"><div class="stat-num">${puzzles.length}</div><div class="stat-label">Published puzzles</div></div>
+      <div class="stat-card"><div class="stat-num">${progress.length}</div><div class="stat-label">Puzzles started</div></div>
+      <div class="stat-card"><div class="stat-num">${totalComplete}</div><div class="stat-label">Puzzles completed</div></div>
+      <div class="stat-card"><div class="stat-num">${progress.length?Math.round(totalComplete/progress.length*100):0}%</div><div class="stat-label">Completion rate</div></div>
+    `;
+
+    // Users table
+    const uTbody=document.querySelector('#users-table tbody');
+    if(!users.length){uTbody.innerHTML='<tr><td colspan="5" style="color:#aaa;font-style:italic">No users yet.</td></tr>';}
+    else uTbody.innerHTML=users.map(u=>`<tr>
+      <td>${u.display_name||'—'}</td>
+      <td>${u.email||'—'}</td>
+      <td>${u.created_at?new Date(u.created_at).toLocaleDateString('en-ZA'):'—'}</td>
+      <td>${u.last_active?new Date(u.last_active).toLocaleDateString('en-ZA'):'—'}</td>
+      <td>${userPuzzleCount[u.id]||0}</td>
+    </tr>`).join('');
+
+    // Activity table
+    const aTbody=document.querySelector('#activity-table tbody');
+    if(!progress.length){aTbody.innerHTML='<tr><td colspan="8" style="color:#aaa;font-style:italic">No activity yet.</td></tr>';}
+    else {
+      const sorted=[...progress].sort((a,b)=>new Date(b.last_saved||0)-new Date(a.last_saved||0));
+      // Build user lookup map
+      const userMap={};
+      users.forEach(u=>{userMap[u.id]=u;});
+      aTbody.innerHTML=sorted.map(p=>{
+        const u=userMap[p.user_id];
+        const userName=u?(u.display_name||u.email||'Unknown'):'Unknown';
+        const badge=p.complete?'<span class="badge b-complete">✓ Complete</span>':'<span class="badge b-progress">⏳ In progress</span>';
+        
+        // Calculate progress using answer_cell_count from puzzle
+        let progressStr = '—';
+        let pctStr = '—';
+        if (!p.complete) {
+          try {
+            const answers = typeof p.answers === 'string' ? JSON.parse(p.answers) : (p.answers || {});
+            const filled = answers ? Object.keys(answers).length : 0;
+            const puzData = puzzles.find(pz => pz.id === p.puzzle_id);
+            const total = puzData ? puzData.answer_cell_count : 0;
+            
+            if (total > 0) {
+              progressStr = `${filled}/${total}`;
+              const pct = Math.round((filled / total) * 100);
+              pctStr = `${pct}%`;
+            } else if (filled > 0) {
+              progressStr = `${filled} letters`;
+            }
+          } catch (e) {
+            console.error('Error calculating progress:', e);
+          }
+        } else {
+          progressStr = '—';
+          pctStr = '100%';
+        }
+        
+        const mins = p.time_spent_seconds ? Math.floor(p.time_spent_seconds/60)+'m '+((p.time_spent_seconds||0)%60)+'s' : '—';
+        const stars = p.rating ? '★'.repeat(p.rating)+'☆'.repeat(5-p.rating) : '—';
+        return`<tr>
+          <td>${userName}</td>
+          <td>${puzzleMap[p.puzzle_id]||p.puzzle_id}</td>
+          <td>${badge}</td>
+          <td>${progressStr}</td>
+          <td>${pctStr}</td>
+          <td>${mins}</td>
+          <td style="color:#f0a500">${stars}</td>
+          <td>${p.check_count||0}</td>
+          <td>${p.last_saved?new Date(p.last_saved).toLocaleDateString('en-ZA'):'—'}</td>
+        </tr>`;
+      }).join('');
+    }
+  // Ratings table
+    const rBody = document.getElementById('ratings-body');
+    if (!ratings.length) { rBody.innerHTML = '<tr><td colspan="3" style="color:#aaa;font-style:italic">No ratings yet.</td></tr>'; }
+    else rBody.innerHTML = ratings.map(r => `<tr>
+      <td>${puzzleMap[r.puzzle_id]||r.puzzle_id}</td>
+      <td style="color:#f0a500">${'★'.repeat(Math.round(r.avg_rating))}${'☆'.repeat(5-Math.round(r.avg_rating))} ${parseFloat(r.avg_rating).toFixed(1)}</td>
+      <td>${r.total_ratings}</td>
+    </tr>`).join('');
+
+    // Comments table
+    const cBody = document.getElementById('comments-body');
+    if (!comments.length) { 
+      cBody.innerHTML = '<tr><td colspan="5" style="color:#aaa;font-style:italic">No feedback yet.</td></tr>'; 
+    } else {
+      const sorted = [...comments].sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+      const userMap = {};
+      users.forEach(u => { userMap[u.id] = u; });
+      cBody.innerHTML = sorted.map(c => {
+        const u = userMap[c.user_id];
+        const userName = u ? (u.display_name || u.email || 'Unknown') : 'Unknown';
+        let typeLabel = '💬 Feedback';
+        if (c.comment_type === 'bug_report') typeLabel = '🐛 Bug';
+        else if (c.comment_type === 'rating_feedback') typeLabel = '⭐ Rating comment';
+        const commentText = c.comment_text.substring(0, 100) + (c.comment_text.length > 100 ? '…' : '');
+        return `<tr>
+          <td>${puzzleMap[c.puzzle_id]||c.puzzle_id}</td>
+          <td>${userName}</td>
+          <td>${typeLabel}</td>
+          <td title="${c.comment_text}">${commentText}</td>
+          <td>${new Date(c.created_at).toLocaleDateString('en-ZA')}</td>
+        </tr>`;
+      }).join('');
+    }
+  } catch(e) {
+    document.getElementById('stats-row').innerHTML=`<div style="color:#c00;padding:12px">Error loading stats: ${e.message}</div>`;
+  }
+  
+  // Add sorting to tables
+  setupTableSorting('users-table');
+  setupTableSorting('activity-table');
+  setupTableSorting('ratings-table');
+  setupTableSorting('comments-table');
+}
+
+// Sorting functionality
+let sortState = {};
+
+function setupTableSorting(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  
+  const headers = table.querySelectorAll('th');
+  headers.forEach((th, colIndex) => {
+    th.onclick = () => sortTable(tableId, colIndex, th);
+  });
+}
+
+function sortTable(tableId, colIndex, thElement) {
+  const table = document.getElementById(tableId);
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr:not(.loading)'));
+  
+  console.log('Sorting table:', tableId, 'column:', colIndex, 'rows found:', rows.length);
+  
+  if (!rows.length) {
+    console.log('No rows found to sort!');
+    return;
+  }
+  
+  const key = tableId + '-' + colIndex;
+  const currentSort = sortState[key] || 'none';
+  const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+  
+  console.log('Current sort state:', currentSort, 'New sort:', newSort);
+  
+  // Clear previous sort indicators from all headers in this table
+  table.querySelectorAll('th').forEach(h => {
+    h.classList.remove('sort-asc', 'sort-desc');
+  });
+  
+  // Add sort indicator to current column
+  thElement.classList.add('sort-' + newSort);
+  
+  // Sort rows
+  rows.sort((a, b) => {
+    const aCell = a.cells[colIndex];
+    const bCell = b.cells[colIndex];
+    
+    let aVal = aCell.textContent.trim();
+    let bVal = bCell.textContent.trim();
+    
+    console.log('Comparing:', aVal, 'vs', bVal);
+    
+    // Try to parse as date (YYYY/MM/DD format)
+    const dateRegex = /^\d{4}\/\d{2}\/\d{2}$/;
+    if (dateRegex.test(aVal) && dateRegex.test(bVal)) {
+      console.log('Detected as dates');
+      const aDate = new Date(aVal).getTime();
+      const bDate = new Date(bVal).getTime();
+      return newSort === 'asc' ? aDate - bDate : bDate - aDate;
+    }
+    
+    // Try to parse as number if both look like numbers
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      console.log('Detected as numbers');
+      return newSort === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+    
+    console.log('Detected as strings');
+    // String comparison
+    return newSort === 'asc' 
+      ? aVal.localeCompare(bVal)
+      : bVal.localeCompare(aVal);
+  });
+  
+  // Re-append sorted rows
+  rows.forEach(row => tbody.appendChild(row));
+  
+  // Update sort state - toggle between asc and desc
+  sortState[key] = newSort;
+  console.log('Sort complete');
+}
+
+</script>
+</body>
+</html>
