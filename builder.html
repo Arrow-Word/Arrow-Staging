@@ -8,12 +8,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v23 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v24 — Arrow Word Puzzles</title>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v23
+     CURRENT VERSION: v24
      ════════════════════════════════════════════════
      CHANGELOG:
+     v24 - Added Publish to the Web beside Quicksave on the Design Grid tab.
      v23 - Applied clue-text box shares consistently in print and exported
            puzzles; verified per-clue font sizes survive local save/reload.
      v22 - Fixed clue-box flex sizing: longer clues receive more of the cell,
@@ -226,7 +227,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-    title="Click for change history">v23 ▾</button>
+    title="Click for change history">v24 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -285,10 +286,12 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
     <button onclick="restoreDraft()" style="background:#1a6e1a;color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">Restore draft</button>
     <button onclick="discardDraft()" style="background:#fff;border:1px solid #b88;color:#7a3030;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px">Discard</button>
   </div>
-  <!-- v14: green Quicksave button below the autosave area for one-tap saves
-       to the saved-puzzles library, so Mum doesn't have to switch tabs. -->
+  <!-- Quick local save and web-directory publish are grouped here for easy access. -->
   <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-    <button class="tool-btn green" onclick="quickSavePuzzle()" style="font-size:13px;padding:8px 14px">💾 Quicksave puzzle</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="tool-btn green" onclick="quickSavePuzzle()" style="font-size:13px;padding:8px 14px">💾 Quicksave puzzle</button>
+      <button class="tool-btn" onclick="publishToWeb()" title="Publish the current edited puzzle to the public web directory" style="background:#ede0ff;color:#443366;border-color:#9966cc;font-weight:600;font-size:13px;padding:8px 14px">🌐 Publish to the Web</button>
+    </div>
     <span id="autosave-indicator" style="font-size:11px;color:#999;text-align:right">Auto-save: ready</span>
   </div>
   <div class="toolbar no-print" style="gap:6px;margin-bottom:6px">
@@ -2581,6 +2584,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v24',notes:['Added a 🌐 Publish to the Web button beside Quicksave on the Design Grid tab. It publishes the current edited puzzle to the public directory.']},
     {v:'v23',notes:['Print and exported solver layouts now use the same clue-text-based box shares as the builder. Fitted font sizes are preserved through the local save/load path.']},
     {v:'v22',notes:['Fixed clue-box sizing: longer clue text gets a larger cell share, independent of font size, so auto-fitting cannot shrink the clue box and squeeze the clue further.']},
     {v:'v21',notes:['Added a clue-box fit checker that finds overflowing clue text, jumps to each affected clue, auto-fits or applies a chosen font size, and lets you ignore individual clues.']},
