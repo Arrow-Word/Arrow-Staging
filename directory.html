@@ -89,8 +89,17 @@ function getPuzzleStatus(id){
 async function loadDir(){
   const content=document.getElementById('dir-content');
   content.innerHTML='<div class="loading">Loading puzzles…</div>';
-  try{allPuzzles=await cloudGetIndex();buildSizeTabs();renderDir();}
-  catch(e){content.innerHTML='<div class="empty-state">Could not load puzzles.<br><small>'+escHtml(e.message)+'</small><br><button onclick="loadDir()">Try again</button></div>';}
+  let timeoutId;
+  try{
+    if(typeof cloudGetIndex!=='function')throw new Error('The puzzle data service did not load (cloud-storage.js). Check that it is beside directory.html.');
+    allPuzzles=await Promise.race([
+      cloudGetIndex(),
+      new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(new Error('The puzzle data request timed out. Check the network connection and try again.')),15000);})
+    ]);
+    clearTimeout(timeoutId);
+    if(!Array.isArray(allPuzzles))throw new Error('The puzzle service returned an unexpected response.');
+    buildSizeTabs();renderDir();
+  }catch(e){clearTimeout(timeoutId);content.innerHTML='<div class="empty-state">Could not load puzzles.<br><small>'+escHtml(e.message||'Unknown error')+'</small><br><button onclick="loadDir()">Try again</button></div>';}
 }
 function buildSizeTabs(){
   const counts={};allPuzzles.forEach(p=>{const s=getSizeLabel(p);counts[s]=(counts[s]||0)+1;});
@@ -130,7 +139,8 @@ function renderDir(){
     content.innerHTML=sizes.sort().map(s=>{const group=list.filter(p=>getSizeLabel(p)===s);return'<section class="group-section"><div class="group-title">'+escHtml(s)+' grid · '+group.length+' puzzle'+(group.length===1?'':'s')+'</div><div class="puzzle-grid">'+group.map(cardHtml).join('')+'</div></section>';}).join('');
   }else content.innerHTML='<div class="puzzle-grid">'+list.map(cardHtml).join('')+'</div>';
 }
-sbOnUserChanged(async user=>{
+loadDir();
+if(typeof sbOnUserChanged==='function')sbOnUserChanged(async user=>{
   const pill=document.getElementById('nav-user'),name=document.getElementById('nav-name'),avatar=document.getElementById('nav-avatar');
   if(user){
     pill.style.display='flex';name.textContent=user.user_metadata?.full_name||user.email||'';avatar.src=user.user_metadata?.avatar_url||'';
@@ -138,7 +148,6 @@ sbOnUserChanged(async user=>{
   }else{pill.style.display='none';_cloudProgress={};}
   renderDir();
 });
-loadDir();
 </script>
 </body>
 </html>
