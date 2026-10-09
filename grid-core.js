@@ -1,14 +1,29 @@
-// grid-core.js — v29
+// grid-core.js — v30
 // ══════════════════════════════════════════════════════════════════════════════
 // The ONE shared copy of the code that draws an Arrow Word puzzle grid.
 // It was moved here, unchanged in behaviour, from builder.html — the builder is
 // the master copy. Pages call it through the "ArrowGrid" object.
 // Change how the grid is DRAWN here, not in the pages. Needs grid-core.css.
 //
+// v30 - Now used by solver.html as well as builder.html.
+//       Clue text and answer letters use the Arimo font, which is shipped with
+//       the site (arimo-bold.woff2), so every device draws them the same way.
+//       The print layout moved here too: one print routine for both pages.
+//       Removed the old "shrink text to fit" step, which never did anything.
 // v29 - First version. Used by builder.html.
 // ══════════════════════════════════════════════════════════════════════════════
 (function () {
   'use strict';
+
+  // ── Font ────────────────────────────────────────────────────────────────────
+  // The grid's text font. Arimo has the same letter widths as Arial; it is
+  // loaded from the site itself (see grid-core.css), so phones and tablets that
+  // have no Arial still wrap clue text exactly as the builder's screen does.
+  const GRID_FONT='Arimo,Arial,sans-serif';
+  // Start fetching the font straight away, and let pages wait for it if needed.
+  const fontReady=(document.fonts&&document.fonts.load)
+    ?document.fonts.load('600 16px Arimo').then(()=>true,()=>false)
+    :Promise.resolve(false);
 
   // ── Arrow SVG ───────────────────────────────────────────────────────────────
   function arrowSVG(dir, s) {
@@ -215,28 +230,238 @@
     return td;
   }
 
-  // ── Fitting clue text into its box ──────────────────────────────────────────
-  // Shrinks a clue's text in half-pixel steps if its box reports an overflow
-  // (never below 4px). Kept exactly as it was in the builder.
-  function fitClueText(slot){
-    const txt=slot.querySelector('.slot-text'); if(!txt)return;
-    let fs=parseFloat(txt.style.fontSize); if(!fs)fs=10;
-    const min=4; let safety=40;
-    while(safety-->0 && fs>min && (slot.scrollWidth>slot.clientWidth+1 || slot.scrollHeight>slot.clientHeight+1)){
-      fs-=0.5;
-      txt.style.fontSize=fs+'px';
+  // ── Printing ────────────────────────────────────────────────────────────────
+  // Reads how a clue is laid out on screen (its lines and size) so the printout
+  // can repeat the same line breaks. "table" is the on-screen grid.
+  function getRenderedClueLayout(table,r,c,index){
+    const cell=table&&table.querySelector('td[data-r="'+r+'"][data-c="'+c+'"]');
+    const slot=cell&&cell.querySelectorAll('.clue-slot')[index];
+    const text=slot&&slot.querySelector('.slot-text');
+    if(!text||!text.clientWidth||!text.clientHeight)return null;
+    const node=text.firstChild;
+    const lines=[];
+    if(node&&node.nodeType===Node.TEXT_NODE&&node.data.length){
+      let line='',lastTop=null;
+      for(let i=0;i<node.data.length;i++){
+        const range=document.createRange();
+        range.setStart(node,i);
+        range.setEnd(node,i+1);
+        const rect=range.getBoundingClientRect();
+        if(rect.height>0&&lastTop!==null&&Math.abs(rect.top-lastTop)>1.5){
+          lines.push(line.trim());
+          line='';
+          lastTop=rect.top;
+        }else if(rect.height>0&&lastTop===null){
+          lastTop=rect.top;
+        }
+        line+=node.data[i];
+      }
+      if(line.length)lines.push(line.trim());
     }
+    return{
+      fontSize:parseFloat(getComputedStyle(text).fontSize)||0,
+      width:text.clientWidth,
+      height:text.clientHeight,
+      lines:lines.filter(Boolean)
+    };
   }
-  function fitAllClueText(root){
-    (root||document).querySelectorAll('.clue-slot').forEach(fitClueText);
+
+  // Prints the puzzle on A4.
+  // o.grid, o.rows, o.cols, o.cellSizePx, o.textSizePx   the puzzle
+  // o.title          heading on each page
+  // o.answerPage     true = an answers page first, then the blank puzzle
+  //                  false = the blank puzzle only
+  // o.screenTable    the on-screen grid, so the print repeats its line breaks
+  function printPuzzle(o){
+    const G=o.grid,R=o.rows,C=o.cols,cellSizePx=o.cellSizePx,textSizePx=o.textSizePx;
+    if(!G||!G.length||!R||!C){alert('There is no puzzle grid to print yet.');return;}
+
+    const pages=document.getElementById('ag-print-pages')||document.body.appendChild(document.createElement('div'));
+    pages.id='ag-print-pages';
+    pages.replaceChildren();
+    const pageName=String(o.title||'').trim()||'Untitled puzzle';
+    const availableWidth=(210-24)/25.4*96;
+    const availableHeight=(297-24-18)/25.4*96;
+    const printCellSize=Math.min(84,availableWidth/C,availableHeight/R);
+    const scale=printCellSize/cellSizePx;
+    const svgNS='http://www.w3.org/2000/svg';
+    const htmlNS='http://www.w3.org/1999/xhtml';
+
+    function svgNode(name,attrs){
+      const node=document.createElementNS(svgNS,name);
+      Object.keys(attrs||{}).forEach(key=>node.setAttribute(key,attrs[key]));
+      return node;
+    }
+
+    function buildPrintGrid(showAnswers){
+      const width=C*printCellSize,height=R*printCellSize;
+      const svg=svgNode('svg',{
+        class:'print-svg',xmlns:svgNS,
+        width:width+'px',height:height+'px',
+        viewBox:'0 0 '+width+' '+height,
+        role:'img','aria-label':showAnswers?'Puzzle answer grid':'Blank puzzle grid'
+      });
+      svg.style.width=width+'px';
+      svg.style.height=height+'px';
+      svg.style.printColorAdjust='exact';
+      svg.style.webkitPrintColorAdjust='exact';
+
+      for(let r=0;r<R;r++){
+        for(let c=0;c<C;c++){
+          const cell=G[r][c]||freshCell();
+          const x=c*printCellSize,y=r*printCellSize;
+          const fill=cell.t==='black'?'#222':cell.t==='clue'?'#eee9f2':'#fff';
+          svg.appendChild(svgNode('rect',{
+            x:x,y:y,width:printCellSize,height:printCellSize,fill:fill
+          }));
+
+          if(cell.t==='answer'&&showAnswers&&cell.answerOf&&cell.answerOf.letter){
+            const letter=svgNode('text',{
+              x:x+printCellSize/2,y:y+printCellSize/2,
+              'text-anchor':'middle','dominant-baseline':'central',
+              'font-family':GRID_FONT,'font-size':Math.round(cellSizePx*.38)*scale,
+              'font-weight':'600',fill:'#111'
+            });
+            letter.textContent=cell.answerOf.letter;
+            svg.appendChild(letter);
+          }
+
+          if(cell.t==='answer'){
+            const markerSize=Math.max(6,printCellSize*0.25);
+            getAnswerArrowMarkers(r,c,G).forEach(marker=>{
+              let markerX=x+printCellSize/2-markerSize/2;
+              let markerY=y+printCellSize/2-markerSize/2;
+              if(marker.edge==='left'){
+                markerX=x+1.5*scale;
+                markerY=y+printCellSize*marker.position/100-markerSize/2;
+              }else if(marker.edge==='right'){
+                markerX=x+printCellSize-markerSize-1.5*scale;
+                markerY=y+printCellSize*marker.position/100-markerSize/2;
+              }else if(marker.edge==='top'){
+                markerX=x+printCellSize*marker.position/100-markerSize/2;
+                markerY=y+1.5*scale;
+              }else{
+                markerX=x+printCellSize*marker.position/100-markerSize/2;
+                markerY=y+printCellSize-markerSize-1.5*scale;
+              }
+              const parsed=new DOMParser().parseFromString(
+                answerArrowSVG(marker.dir,markerSize),
+                'image/svg+xml'
+              );
+              const markerSvg=document.importNode(parsed.documentElement,true);
+              markerSvg.setAttribute('x',markerX);
+              markerSvg.setAttribute('y',markerY);
+              markerSvg.setAttribute('width',markerSize);
+              markerSvg.setAttribute('height',markerSize);
+              svg.appendChild(markerSvg);
+            });
+          }
+
+          if(cell.t==='clue'&&Array.isArray(cell.clues)&&cell.clues.length){
+            const clues=cell.clues;
+            const gap=clues.length>1?0.6:0;
+            const usableHeight=printCellSize-gap*(clues.length-1);
+            const sizes=clues.map(cl=>cl.textSize&&cl.textSize>0?cl.textSize:textSizePx);
+            const weights=clues.map(clueBoxWeight);
+            const totalWeight=weights.reduce((sum,weight)=>sum+weight,0)||clues.length;
+            let slotY=y;
+            clues.forEach((cl,index)=>{
+              const slotHeight=usableHeight*(weights[index]/totalWeight);
+              if(index>0){
+                svg.appendChild(svgNode('line',{
+                  x1:x+2,y1:slotY+gap/2,x2:x+printCellSize-2,y2:slotY+gap/2,
+                  stroke:'#9966cc','stroke-width':'0.7'
+                }));
+                slotY+=gap;
+              }
+
+              const inset=1;
+              const fo=svgNode('foreignObject',{
+                x:x+inset,y:slotY+inset,
+                width:Math.max(1,printCellSize-inset*2),
+                height:Math.max(1,slotHeight-inset*2)
+              });
+              const slot=document.createElementNS(htmlNS,'div');
+              slot.style.cssText='width:100%;height:100%;box-sizing:border-box;display:flex;overflow:hidden;padding:1px 2px;align-items:center;justify-content:center;';
+
+              const text=document.createElementNS(htmlNS,'div');
+              const screenLayout=getRenderedClueLayout(o.screenTable,r,c,index);
+              text.textContent=screenLayout&&screenLayout.lines.length
+                ?screenLayout.lines.join('\n')
+                :(cl.clue||'?');
+              text.style.cssText='font-family:'+GRID_FONT+';font-weight:600;color:#222;line-height:1.15;text-align:center;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:none;min-width:0;min-height:0;width:100%;flex:1 1 auto;';
+              if(screenLayout&&screenLayout.lines.length>1)text.style.whiteSpace='pre-line';
+              const printTextScale=screenLayout
+                ?Math.min(
+                    Math.max(1,printCellSize-inset*2-4)/screenLayout.width,
+                    Math.max(1,slotHeight-inset*2-2)/screenLayout.height
+                  )
+                :scale;
+              text.style.fontSize=((screenLayout&&screenLayout.fontSize||sizes[index])*printTextScale)+'px';
+              slot.appendChild(text);
+              fo.appendChild(slot);
+              svg.appendChild(fo);
+              slotY+=slotHeight;
+            });
+          }
+        }
+      }
+
+      // Draw every grid boundary once, above the cell contents. Using SVG strokes
+      // avoids browser table-border collapsing or omitted cell borders in print.
+      const lineWidth=1.1;
+      for(let c=0;c<=C;c++){
+        const x=c===0?lineWidth/2:c===C?width-lineWidth/2:c*printCellSize;
+        svg.appendChild(svgNode('line',{
+          x1:x,y1:0,x2:x,y2:height,stroke:'#222',
+          'stroke-width':lineWidth,'shape-rendering':'crispEdges'
+        }));
+      }
+      for(let r=0;r<=R;r++){
+        const y=r===0?lineWidth/2:r===R?height-lineWidth/2:r*printCellSize;
+        svg.appendChild(svgNode('line',{
+          x1:0,y1:y,x2:width,y2:y,stroke:'#222',
+          'stroke-width':lineWidth,'shape-rendering':'crispEdges'
+        }));
+      }
+      return svg;
+    }
+
+    function addPrintPage(showAnswers){
+      const page=document.createElement('section');
+      page.className='print-page';
+      const heading=document.createElement('h1');
+      heading.className='print-title';
+      heading.textContent=pageName;
+      const gridArea=document.createElement('div');
+      gridArea.className='print-grid-area';
+      gridArea.appendChild(buildPrintGrid(showAnswers));
+      page.append(heading,gridArea);
+      pages.appendChild(page);
+    }
+
+    if(o.answerPage)addPrintPage(true);
+    addPrintPage(false);
+    document.body.classList.add('ag-printing');
+    window.addEventListener('afterprint',function cleanupPrint(){
+      document.body.classList.remove('ag-printing');
+      pages.replaceChildren();
+      window.removeEventListener('afterprint',cleanupPrint);
+    },{once:true});
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        window.print();
+      });
+    });
   }
 
   window.ArrowGrid={
-    version:'v29',
+    version:'v30',
+    GRID_FONT,fontReady,
     arrowSVG,answerArrowSVG,
     getWordCells,firstAnswerTarget,clueBoxWeight,
     getAnswerArrowMarkers,appendAnswerArrowMarkers,
     freshCell,gridFromData,buildCell,
-    fitClueText,fitAllClueText
+    getRenderedClueLayout,printPuzzle
   };
 })();
