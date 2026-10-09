@@ -1,0 +1,31 @@
+/* grid-core.css — v29
+   ══════════════════════════════════════════════════════════════════════════
+   The ONE shared look of an Arrow Word puzzle grid: squares, clue boxes,
+   clue text, answer squares and the small arrows.
+   These rules were moved here, unchanged, from builder.html (the builder is
+   the master copy). Change the grid's look HERE, not in the pages.
+   v29 - First version. Used by builder.html.
+   ══════════════════════════════════════════════════════════════════════════ */
+table.puzzle{border-collapse:collapse;table-layout:fixed}
+table.puzzle td{border:1px solid #aaa;position:relative;user-select:none;padding:0;overflow:hidden}
+td.t-empty{background:#fff}
+td.t-black{background:#333}
+td.t-clue{background:#e8e0f0}
+td.t-answer{background:#eaf5e4;text-align:center;vertical-align:middle}
+/* clue cell layout */
+.clue-inner{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+/* Each slot's flex-grow is based on clue length, not font size. Changing a
+   clue's font therefore never takes space away from that clue's own box. */
+.clue-slot{display:flex;flex:1 1 0;min-height:0;overflow:hidden;padding:1px 2px;position:relative;align-items:center;justify-content:center}
+.slot-text{font-weight:600;color:#443366;overflow:hidden;flex:0 1 auto;line-height:1.15;text-align:center;overflow-wrap:normal;word-break:normal;hyphens:none}
+.clue-slot .slot-text{display:flex;width:100%;height:100%;flex:1 1 auto;align-items:center;justify-content:center}
+.clue-divider{height:1px;background:#9966cc;opacity:0.6;flex-shrink:0;margin:0 2px}
+.ans-letter{font-weight:600;color:#222;line-height:1}
+.solve-input{width:100%;height:100%;border:none;background:transparent;text-align:center;font-weight:600;color:#222;outline:none;text-transform:uppercase;display:block;cursor:text}
+.ans-letter,.solve-input{position:relative;z-index:1}
+.answer-arrow-marker{position:absolute;display:block;width:var(--arrow-size);height:var(--arrow-size);z-index:2;pointer-events:none;line-height:0}
+.answer-arrow-marker svg{display:block;width:100%;height:100%}
+.answer-arrow-marker.edge-left{left:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-right{right:1px;top:var(--slot-position);transform:translateY(-50%)}
+.answer-arrow-marker.edge-top{top:1px;left:var(--slot-position);transform:translateX(-50%)}
+.answer-arrow-marker.edge-bottom{bottom:1px;left:var(--slot-position);transform:translateX(-50%)}
