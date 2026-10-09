@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle Directory — Arrow Word Puzzles</title>
+<script src="site-banner.js?v=27"></script>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<!--
+  Arrow Word Puzzles
+  ══════════════════════════════════════════════════════
+  CURRENT VERSION: v27
+  ══════════════════════════════════════════════════════
+  CHANGELOG:
+  v27 - The solver moved to its own page (solver.html).
+        This page now only browses puzzles and shows progress badges.
+        Clicking Solve opens solver.html?id=PUZZLE_ID.
+        Old links (directory.html?id=...) are forwarded to the solver.
+        After signing in, the chosen puzzle opens automatically.
+        Sign-in box can be dismissed with "Not now".
+        Shows a TEST SITE banner on the staging address (site-banner.js).
+  v22 - Up/down arrows are horizontally centered in the answer cell.
+        Builder and solver screens and printouts now share the same alignment.
+  v21 - Solver clue boxes now use the builder's clue-length proportions.
+        Solver print preserves the on-screen fitted font and line breaks.
+  v20 - Merged celebration and ratings into single modal (no skip).
+        Added comments field to completion modal (optional).
+        Added "Report Bug / Comment" button in solver header.
+        New puzzle_comments table in Supabase for feedback tracking.
+  v18 - Complete auth rewrite using Supabase.
+        Real Google OAuth (genuine Google login page).
+        Facebook login support added.
+        Sign-in prompt appears on Solve click, not on page load.
+        Progress and completions saved to Supabase cloud database.
+        Check answers count tracked per user per puzzle.
+        Cross-device progress sync for signed-in users.
+        Removed Reveal answers button from solver.
+        Fixed nav/user-bar overlap.
+        Admin page foundation added.
+        Per-user stats: puzzles started, completed, check count.
+  v17 - Fixed cloud storage cross-device (GitHub CDN + API).
+        Directory default sort A-Z. Check answers clears selection.
+        Clicking whitespace deselects word. Save progress button.
+        Completed/in-progress badges. Delete from directory button.
+        Renamed Export file. Per-clue font size restored.
+        No-cache headers on all HTML files.
+  v16 - Solver-focused home page. About-builder page.
+        Delete puzzles page (password protected).
+        Size grouping tabs. Builder password protected.
+  v15 - JSONBin cloud storage. Anyone can publish.
+  v14 - Multi-page site. Navbar. Publish to web.
+  v13 - Zoom controls. Mobile improvements.
+  v12 - Celebration on completion.
+  v11 - Per-clue text size.
+  v10 - Drag to reorder clues.
+  v9  - Edit existing clues.
+  v8  - Confirm dialogs before delete/reset.
+  v7  - Fixed left/up word direction.
+  v6  - Crossing letter conflict detection.
+  v5  - Multiple clues per cell.
+  v4  - All 12 arrow directions.
+  v3  - Auto-place answer letters.
+  v2  - Visual direction picker.
+  v1  - Initial builder.
+  ══════════════════════════════════════════════════════
+-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f0ff;color:#222;min-height:100vh}
+nav{background:#7744bb;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nav-brand{font-size:20px;font-weight:700;text-decoration:none;color:#fff}
+.nav-brand span{color:#e8d8ff}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nav-links a{color:#e8d8ff;text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500}
+.nav-links a:hover{background:rgba(255,255,255,0.15)}
+.nav-links a.active{background:rgba(255,255,255,0.22);color:#fff}
+/* User pill in nav */
+.nav-user{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px 4px 4px}
+.nav-user img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.nav-user span{font-size:13px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-user button{background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer}
+.nav-user button:hover{background:rgba(255,255,255,0.35)}
+.page-header{background:#fff;border-bottom:1px solid #e8e0f0;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-header h1{font-size:22px;font-weight:700;color:#443366}
+.page-header p{font-size:13px;color:#888;margin-top:2px}
+main{max-width:1000px;margin:0 auto;padding:24px}
+.dir-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.dir-toolbar input{flex:1;min-width:180px;padding:8px 12px;font-size:14px;border:1px solid #ccc;border-radius:6px;background:#fff}
+.dir-toolbar select{padding:8px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px;background:#fff}
+.refresh-btn{padding:8px 14px;font-size:13px;cursor:pointer;border:1px solid #bbb;border-radius:6px;background:#fff}
+.refresh-btn:hover{background:#eee}
+.count-line{font-size:12px;color:#999;margin-bottom:8px}
+.size-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.size-tab{padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #ccc;border-radius:20px;background:#fff;color:#666}
+.size-tab:hover{border-color:#9966cc;color:#7744bb}
+.size-tab.active{background:#7744bb;color:#fff;border-color:#7744bb}
+.group-section{margin-bottom:32px}
+.group-title{font-size:15px;font-weight:700;color:#443366;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #e8e0f0;display:flex;align-items:center;gap:8px}
+.group-count{font-size:12px;font-weight:400;color:#aaa;background:#f0ecff;padding:2px 8px;border-radius:10px}
+.puzzle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.pcard{background:#fff;border:1px solid #e0d8f0;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,transform .12s;position:relative}
+.pcard:hover{box-shadow:0 4px 18px rgba(119,68,187,0.15);transform:translateY(-2px)}
+.pcard-title{font-size:15px;font-weight:700;color:#443366;line-height:1.3}
+.pcard-meta{font-size:11px;color:#aaa}
+.pcard-size{font-size:11px;color:#888;background:#f0ecff;display:inline-block;padding:2px 8px;border-radius:4px;align-self:flex-start}
+.pcard-badge{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.badge-complete{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.badge-inprogress{background:#fff3cd;color:#856404;border:1px solid #ffc107}
+.btn-solve{width:100%;background:#7744bb;color:#fff;border:none;border-radius:6px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn-solve:hover{background:#6633aa}
+.empty-state{text-align:center;padding:64px 24px;color:#999;grid-column:1/-1}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.loading{color:#aaa;font-style:italic;font-size:14px;padding:24px;grid-column:1/-1;text-align:center}
+
+/* Sign-in modal */
+#signin-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:500;align-items:center;justify-content:center;padding:16px}
+#signin-modal.open{display:flex}
+.signin-box{background:#fff;border-radius:14px;padding:32px 28px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.signin-box h2{font-size:20px;font-weight:700;color:#443366;margin-bottom:8px}
+.signin-box p{font-size:13px;color:#666;line-height:1.6;margin-bottom:24px}
+.btn-google{width:100%;background:#fff;color:#333;border:1px solid #ddd;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:box-shadow .15s}
+.btn-google:hover{box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.btn-guest{width:100%;background:#fff;color:#888;border:1px solid #e0e0e0;border-radius:8px;padding:11px;font-size:13px;cursor:pointer}
+.btn-guest:hover{background:#f5f5f5}
+.signin-note{font-size:11px;color:#bbb;margin-top:14px;line-height:1.5}
+
+.puzzle-rating{font-size:11px;color:#f0a500;margin-top:2px}
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-brand" href="index.html">Arrow<span>Word</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="directory.html" class="active">Puzzles</a>
+    <!-- User pill — shown when signed in -->
+    <div class="nav-user" id="nav-user">
+      <img id="nav-avatar" src="" alt="">
+      <span id="nav-name"></span>
+      <button onclick="sbSignOut()">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div>
+    <h1><img src="favicon.png" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;margin-right:6px;object-fit:cover"> Puzzle Directory</h1>
+    <p>Click any puzzle to solve it online</p>
+  </div>
+  <a href="builder.html" style="background:#7744bb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:600">+ Create puzzle</a>
+</div>
+
+<main>
+  <div class="dir-toolbar">
+    <input type="text" id="search" placeholder="Search puzzles…" oninput="renderDir()">
+    <select id="sort-by" onchange="renderDir()">
+      <option value="alpha" selected>A–Z</option>
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+    </select>
+    <button class="refresh-btn" onclick="loadDir()">↻ Refresh</button>
+  </div>
+  <div class="size-tabs" id="size-tabs"></div>
+  <div class="count-line" id="count-line"></div>
+  <div id="dir-content"><div class="loading">Loading puzzles…</div></div>
+</main>
+
+<!-- Sign-in modal -->
+<div id="signin-modal">
+  <div class="signin-box">
+    <img src="favicon.png" style="width:80px;height:80px;border-radius:16px;margin-bottom:12px;object-fit:cover">
+    <h2>Sign in to track your progress</h2>
+    <p>Sign in to save your progress and pick up where you left off — on any device, any browser. Your puzzle history is saved to your account.</p>
+    <button class="btn-google" onclick="doSignIn('google')">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <button class="btn-guest" onclick="cancelSignIn()">Not now</button>
+<p class="signin-note">Sign in with your Google account to track your progress across devices. We only store your puzzle progress — nothing else.</p>
+  </div>
+</div>
+
+<script src="cloud-storage.js?v=20260532"></script>
+<script src="supabase-auth.js?v=20260532"></script>
+<script>
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Auth state ────────────────────────────────────────────────────────────────
+let _cloudProgress = {};
+let _puzzleRatings = {};
+// A puzzle the visitor asked to solve before being signed in.
+// Comes from an old-style link (directory.html?id=...) or from clicking Solve.
+const _urlPuzzleId = new URLSearchParams(location.search).get('id') || null;
+let _pendingSolverId = _urlPuzzleId;
+const PENDING_KEY = 'arrowword_pending_solve';
+
+function goToSolver(id, replace) {
+  const url = 'solver.html?id=' + encodeURIComponent(id);
+  if (replace) location.replace(url); else location.href = url;
+}
+function rememberPending(id) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id, t: Date.now() })); } catch(e) {}
+}
+function readPending() {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null');
+    if (p && p.id && Date.now() - p.t < 10 * 60 * 1000) return p.id;
+  } catch(e) {}
+  return null;
+}
+function clearPending() { try { sessionStorage.removeItem(PENDING_KEY); } catch(e) {} }
+
+async function refreshProgress() {
+  try {
+    _cloudProgress = await sbLoadAllProgress();
+    _puzzleRatings = await sbGetRatings().catch(() => ({}));
+    renderDir();
+  } catch(e) { console.warn('Progress load failed:', e); }
+}
+
+sbOnUserChanged(async user => {
+  const navUser = document.getElementById('nav-user');
+  const navName = document.getElementById('nav-name');
+  const navAvatar = document.getElementById('nav-avatar');
+  if (user) {
+    navUser.style.display = 'flex';
+    navName.textContent = user.user_metadata?.full_name || user.email || '';
+    navAvatar.src = user.user_metadata?.avatar_url || '';
+    document.getElementById('signin-modal').classList.remove('open');
+    // Signed in with a puzzle waiting — open it in the solver page
+    const id = _pendingSolverId || readPending();
+    if (id) {
+      _pendingSolverId = null;
+      clearPending();
+      goToSolver(id, !!_urlPuzzleId);
+      return;
+    }
+    await refreshProgress();
+  } else {
+    navUser.style.display = 'none';
+    _cloudProgress = {};
+    renderDir();
+    if (_pendingSolverId) document.getElementById('signin-modal').classList.add('open');
+  }
+});
+
+// ── Sign-in flow ──────────────────────────────────────────────────────────────
+async function doSignIn(provider) {
+  if (_pendingSolverId) rememberPending(_pendingSolverId);
+  document.getElementById('signin-modal').classList.remove('open');
+  if (provider === 'google') await sbSignInGoogle();
+  else if (provider === 'facebook') await sbSignInFacebook();
+}
+
+function cancelSignIn() {
+  _pendingSolverId = null;
+  clearPending();
+  document.getElementById('signin-modal').classList.remove('open');
+  if (_urlPuzzleId) history.replaceState(null, '', 'directory.html');
+}
+
+function solveClicked(id) {
+  if (sbGetUser()) {
+    goToSolver(id, false);
+  } else {
+    _pendingSolverId = id;
+    document.getElementById('signin-modal').classList.add('open');
+  }
+}
+
+// ── Progress helpers ──────────────────────────────────────────────────────────
+function getPuzzleStatus(id) {
+  // Cloud is authoritative
+  if (_cloudProgress[id] && _cloudProgress[id].complete) return 'complete';
+  if (_cloudProgress[id]) return 'inprogress';
+  // Fall back to localStorage
+  const complete = JSON.parse(localStorage.getItem('arrowword_complete') || '{}');
+  if (complete[id]) return 'complete';
+  const progress = JSON.parse(localStorage.getItem('arrowword_progress') || '{}');
+  if (progress[id]) return 'inprogress';
+  return 'new';
+}
+
+// ── Directory ─────────────────────────────────────────────────────────────────
+let allPuzzles = [], activeSize = 'all';
+
+async function loadDir() {
+  document.getElementById('dir-content').innerHTML = '<div class="loading">Loading puzzles…</div>';
+  document.getElementById('size-tabs').innerHTML = '';
+  try {
+    allPuzzles = await cloudGetIndex();
+    buildSizeTabs();
+    renderDir();
+  } catch(e) {
+    document.getElementById('dir-content').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load puzzles.<br><small style="color:#bbb">${escHtml(e.message)}</small></p><button onclick="loadDir()" style="background:#7744bb;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;margin-top:12px">Try again</button></div>`;
+  }
+}
+
+function getSizeLabel(p) { return (p.cols && p.rows) ? p.cols + '×' + p.rows : '?×?'; }
+
+function buildSizeTabs() {
+  const counts = {};
+  allPuzzles.forEach(p => { const s = getSizeLabel(p); counts[s] = (counts[s] || 0) + 1; });
+  const sizes = Object.keys(counts).sort((a, b) => {
+    const [ac,ar] = a.split('×').map(Number);
+    const [bc,br] = b.split('×').map(Number);
+    return (ac * ar) - (bc * br);
+  });
+  const tabs = document.getElementById('size-tabs');
+  if (sizes.length <= 1) { tabs.style.display = 'none'; return; }
+  tabs.style.display = 'flex';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'size-tab active'; allBtn.textContent = 'All (' + allPuzzles.length + ')';
+  allBtn.onclick = () => setSize('all'); tabs.appendChild(allBtn);
+  sizes.forEach(s => {
+    const btn = document.createElement('button'); btn.className = 'size-tab';
+    btn.textContent = s + ' (' + counts[s] + ')'; btn.dataset.size = s;
+    btn.onclick = () => setSize(s); tabs.appendChild(btn);
+  });
+}
+
+function setSize(s) {
+  activeSize = s;
+  document.querySelectorAll('.size-tab').forEach(t => t.classList.toggle('active', t.dataset.size === s || (s === 'all' && !t.dataset.size)));
+  renderDir();
+}
+
+function renderDir() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const sort = document.getElementById('sort-by').value;
+  let list = allPuzzles.filter(p => {
+    if (!p || !p.id) return false;
+    const matchQ = !q || (p.title || '').toLowerCase().includes(q);
+    const matchSize = activeSize === 'all' || getSizeLabel(p) === activeSize;
+    return matchQ && matchSize;
+  });
+  if (sort === 'newest') list = [...list].sort((a, b) => (b.publishedAtMs || 0) - (a.publishedAtMs || 0));
+  else if (sort === 'oldest') list = [...list].sort((a, b) => (a.publishedAtMs || 0) - (b.publishedAtMs || 0));
+  else list = [...list].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  document.getElementById('count-line').textContent = list.length + ' puzzle' + (list.length === 1 ? '' : 's');
+  const content = document.getElementById('dir-content');
+  if (!list.length) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>${q ? 'No puzzles match your search.' : 'No puzzles published yet.'}</p></div>`;
+    return;
+  }
+  const sizes = [...new Set(list.map(p => getSizeLabel(p)))];
+  if (activeSize === 'all' && sizes.length > 1 && !q && sort === 'alpha') {
+    content.innerHTML = sizes.sort().map(s => {
+      const group = list.filter(p => getSizeLabel(p) === s);
+      return `<div class="group-section"><div class="group-title">${s} grid <span class="group-count">${group.length} puzzle${group.length === 1 ? '' : 's'}</span></div><div class="puzzle-grid">${group.map(cardHtml).join('')}</div></div>`;
+    }).join('');
+  } else {
+    content.innerHTML = '<div class="puzzle-grid">' + list.map(cardHtml).join('') + '</div>';
+  }
+}
+
+function cardHtml(p) {
+  const title = p.title || '(Untitled)';
+  const status = getPuzzleStatus(p.id);
+  const badge = status === 'complete' ? '<span class="pcard-badge badge-complete">✓ Completed</span>'
+    : status === 'inprogress' ? '<span class="pcard-badge badge-inprogress">⏳ In progress</span>' : '';
+  const btnLabel = status === 'inprogress' ? '▶ Continue solving' : status === 'complete' ? '↺ Solve again' : 'Solve →';
+  const builderCredit = p.builder_name ? `<div style="font-size:10px;color:#999;margin-top:2px">by ${escHtml(p.builder_name)}</div>` : '';
+  return `<div class="pcard">${badge}
+    <div class="pcard-title">${escHtml(title)}</div>
+    <div class="pcard-meta">Published ${p.publishedAt || ''}</div>
+    ${builderCredit}
+    ${_puzzleRatings[p.id] ? `<div class="puzzle-rating">${'★'.repeat(Math.round(_puzzleRatings[p.id].avg_rating))}${'☆'.repeat(5-Math.round(_puzzleRatings[p.id].avg_rating))} ${parseFloat(_puzzleRatings[p.id].avg_rating).toFixed(1)}</div>` : ''}
+    ${p.cols && p.rows ? `<div class="pcard-size">${p.cols}×${p.rows} grid</div>` : ''}
+    <button class="btn-solve" onclick="solveClicked('${p.id}')">${btnLabel}</button>
+  </div>`;
+}
+
+// Coming back from the solver with the browser's Back button can show a
+// remembered copy of this page — refresh the badges when that happens.
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  if (sbGetUser()) refreshProgress(); else renderDir();
+});
+
+loadDir();
+</script>
+</body>
+</html>
