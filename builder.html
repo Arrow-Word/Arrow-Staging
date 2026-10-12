@@ -8,13 +8,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
-<title>Puzzle Builder v30 — Arrow Word Puzzles</title>
+<title>Puzzle Builder v31 — Arrow Word Puzzles</title>
 <script src="site-banner.js?v=27"></script>
 <!-- Arrow Word Puzzle Builder
      ════════════════════════════════════════════════
-     CURRENT VERSION: v30
+     CURRENT VERSION: v31
      ════════════════════════════════════════════════
      CHANGELOG:
+     v31 - Tidy-up: removed unused code and styling. "Load & edit" and
+           "Delete from Directory" no longer download every published puzzle.
      v30 - Grid text now uses the Arimo font, shipped with the site, so every
            device draws clues exactly as the builder does (Arimo has Arial's
            letter widths). Phones no longer resize text on their own.
@@ -151,10 +153,6 @@ td.t-answer{cursor:default}
 .saved-item .date{font-size:10px;color:#999;margin-right:4px}
 .saved-item .progress-tag{font-size:10px;background:#fff5b8;color:#7a5500;padding:2px 6px;border-radius:3px;border:1px solid #e6c870}
 /* edit clue inline */
-.edit-form{background:#f0ecff;border:1px solid #c0a8f0;border-radius:6px;padding:8px;margin-bottom:6px}
-.edit-form .field{margin-bottom:6px}
-.edit-form .field label{font-size:11px}
-.edit-form .field input{font-size:12px;padding:4px 7px}
 /* Clue modal: keep Add/Close buttons visible on small screens */
 #modal .modal{max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden}
 #modal .modal > h3, #modal .modal > .divider, #modal .modal > .field, #modal .modal > .warn, #modal .modal > #add-clue-heading{flex-shrink:0}
@@ -185,7 +183,7 @@ td.t-answer{cursor:default}
     
   </div>
 </nav>
-<script src="cloud-storage.js?v=20260508"></script>
+<script src="cloud-storage.js?v=31"></script>
 <script>
 const BUILDER_PASSWORD = 'arrowword2024';
 const BUILDER_UNLOCK_KEY = 'builder_unlocked_v20';
@@ -199,7 +197,7 @@ if(!sessionStorage.getItem(BUILDER_UNLOCK_KEY)){document.getElementById('builder
 <div style="position:relative">
   <button id="version-badge" type="button" onclick="openChangelog()"
     style="position:absolute;top:0;right:0;background:#ede0ff;color:#554488;border:1.5px solid #9966cc;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.2"
-     title="Click for change history">v30 ▾</button>
+     title="Click for change history">v31 ▾</button>
   <h1>Arrow Word Puzzle Builder</h1>
   <p class="subtitle">Design, solve, save and print arrow word puzzles</p>
 </div>
@@ -552,13 +550,6 @@ let clueFitSession=null;
 
 function fresh(){return{t:'empty',clues:[],answerOf:null};}
 
-function confirmNewGrid(){
-  const hasContent=G.some(row=>row.some(cell=>cell.t!=='empty'));
-  if(hasContent && !confirm('Start a new grid? Your current puzzle will be lost (save it first if needed).')) return;
-  buildGrid();
-  markDirty();
-}
-
 function buildGrid(){
   // v14: grid size inputs moved to the New Puzzle tab.
   R=parseInt(document.getElementById('np-rows').value)||9;
@@ -601,8 +592,6 @@ function drawDesign(){
   }
   if(typeof dApplyZoom==='function')dApplyZoom();
 }
-
-function asz(){return Math.max(10,Math.round(cellSizePx*0.24));}
 
 // The square itself is drawn by grid-core.js; the builder only adds what
 // happens when it is clicked or typed in.
@@ -1917,6 +1906,7 @@ const CHANGELOG=[
 function openChangelog(){
   const body=document.getElementById('changelog-body');
   const log=[
+    {v:'v31',notes:['Tidy-up: removed old unused code. Loading a published puzzle and removing one from the directory are quicker, because the builder no longer downloads every puzzle to do it.']},
     {v:'v30',notes:['Clue text and answer letters now use a font that is shipped with the site (Arimo, which has the same letter widths as Arial). Solvers on every phone, tablet and computer now see your clues wrapped exactly as you see them here. The solver and both printouts now use the very same drawing code as the builder.']},
     {v:'v29',notes:['Behind the scenes: the code that draws the puzzle grid now lives in shared files (grid-core.js and grid-core.css) that the solver will also use, so builder and solver can never drift apart. Nothing looks or works differently.']},
     {v:'v28',notes:['Export file now downloads a small puzzle data file (.json) that you load back with Import puzzle from file. The old stand-alone web page export has been removed. Each puzzle in the published list has a new ⬇️ Download button to save it to your computer.']},
@@ -2019,7 +2009,7 @@ async function deleteFromDir(i){
   const btn=event&&event.target;const origText=btn?btn.textContent:'';
   if(btn){btn.textContent='⏳…';btn.disabled=true;}
   try{
-    const puzzles=await cloudGetPuzzles();
+    const puzzles=await cloudGetIndex();   // titles only — no need to download every puzzle
     const match=puzzles.find(x=>x.title===p.name);
     if(!match){if(btn){btn.textContent=origText;btn.disabled=false;}alert('"'+p.name+'" was not found in the directory. It may not have been published yet.');return;}
     await cloudRemovePuzzle(match.id);
@@ -2072,8 +2062,7 @@ async function loadPublishedList() {
 async function loadPublishedPuzzle(id) {
   if (!confirm('Load this published puzzle into the builder?\n\nThis will replace what you are currently editing. Save your current work first if needed.')) return;
   try {
-    const all = await cloudGetPuzzles();
-    const entry = all.find(p => p.id === id);
+    const entry = await cloudGetPuzzle(id);   // just this one puzzle
     if (!entry || !entry.data) throw new Error('Puzzle data not found');
     loadFromData(entry.data, entry.title);
     // Switch to Design tab

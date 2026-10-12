@@ -13,8 +13,9 @@
 <!--
   Arrow Word Puzzles — Solver page
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v30
+  CURRENT VERSION: v31
   ══════════════════════════════════════════════════════
+  v31 - Tidy-up: removed an unused style. Loads the latest shared files.
   v30 - The grid is now drawn by grid-core.js / grid-core.css, the very same
         code the builder uses, so a puzzle looks exactly as its builder made it.
         Grid text uses the Arimo font shipped with the site, so every device
@@ -92,7 +93,6 @@ td.t-clue:hover{background:#ddd0ee}
 .star.active{opacity:1}
 .star:hover{transform:scale(1.15)}
 .btn-rate{background:#7744bb;color:#fff;border:none;border-radius:7px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
-.btn-skip{background:#fff;color:#888;border:1px solid #ddd;border-radius:7px;padding:10px 20px;font-size:13px;cursor:pointer}
 .celebration{display:none;font-size:48px;margin-bottom:16px}
 .comment-section{margin:20px 0;text-align:left}
 .comment-section label{display:block;font-size:13px;font-weight:600;color:#443366;margin-bottom:8px}
@@ -167,8 +167,8 @@ td.t-clue:hover{background:#ddd0ee}
     </div>
 </div>
 
-<script src="cloud-storage.js?v=20260532"></script>
-<script src="supabase-auth.js?v=20260532"></script>
+<script src="cloud-storage.js?v=31"></script>
+<script src="supabase-auth.js?v=31"></script>
 <script src="grid-core.js?v=30"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}

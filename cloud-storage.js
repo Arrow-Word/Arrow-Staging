@@ -1,5 +1,7 @@
-// cloud-storage.js — v19.2
-// Puzzle storage via Supabase — no tokens needed, works on any device
+// cloud-storage.js — v31
+// Puzzle storage via Supabase — no tokens needed, works on any device.
+// v31 - Removed two unused functions, including cloudSavePuzzles, an old
+//       "delete every puzzle and re-add them" routine nothing called any more.
 
 const SUPABASE_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
@@ -10,17 +12,6 @@ async function _sbGet(url) {
   const res = await fetch(url, { headers: SB_HEADERS });
   if (!res.ok) throw new Error('Supabase read error ' + res.status);
   return res.json();
-}
-
-async function _sbPut(id, row) {
-  const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), {
-    method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(row)
-  });
-  if (res.status === 404 || (await res.clone().json().then(d => !d || !d.length).catch(() => true))) {
-    // Row doesn't exist, insert
-    const ins = await fetch(SB_PUZZLES, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(row) });
-    if (!ins.ok) throw new Error('Supabase insert error ' + ins.status);
-  }
 }
 
 // Fast index — titles/sizes only
@@ -64,14 +55,4 @@ async function cloudPublishPuzzle(title, data) {
 async function cloudRemovePuzzle(id) {
   const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: SB_HEADERS });
   if (!res.ok) throw new Error('Delete error ' + res.status);
-}
-
-async function cloudSavePuzzles(list) {
-  // Delete all then reinsert — used by admin clear
-  await fetch(SB_PUZZLES + '?id=neq.none', { method: 'DELETE', headers: SB_HEADERS });
-  if (list && list.length) {
-    const rows = list.map(p => ({ id: p.id, title: p.title, published_at: p.publishedAt, published_at_ms: p.publishedAtMs, rows: p.rows, cols: p.cols, data: p.data }));
-    const res = await fetch(SB_PUZZLES, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(rows) });
-    if (!res.ok) throw new Error('Bulk insert error ' + res.status);
-  }
 }
