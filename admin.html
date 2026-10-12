@@ -9,8 +9,10 @@
 <script src="site-banner.js?v=27"></script>
 <!--
   Arrow Word Puzzles — Admin dashboard
-  CURRENT VERSION: v31
+  CURRENT VERSION: v32
   CHANGELOG:
+  v32 - The admin signs in with Google; the page opens for admin accounts
+        (password kept as a backup for now).
   v31 - Tidy-up: removed unused code and styling. Loads the latest shared files.
   v27 - Shows a TEST SITE banner when opened from the staging address (site-banner.js).
 -->
@@ -59,7 +61,7 @@ tr:hover td{background:#faf8ff}
   <div class="lock-box">
     <div style="font-size:40px;margin-bottom:12px">🔐</div>
     <h2>Admin Dashboard</h2>
-    <p>Enter password to view user stats</p>
+    <p>Sign in with your admin account to view user stats</p>
     <input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')checkPwd()">
     <button onclick="checkPwd()">Enter</button>
     <div id="pwd-err" style="color:#c00;font-size:12px;margin-top:8px;min-height:16px"></div>
@@ -99,8 +101,9 @@ tr:hover td{background:#faf8ff}
 
 </div>
 
-<script src="supabase-auth.js?v=31"></script>
-<script src="cloud-storage.js?v=31"></script>
+<script src="supabase-auth.js?v=32"></script>
+<script src="cloud-storage.js?v=32"></script>
+<script src="staff-access.js?v=32"></script>
 <script>
 const ADMIN_PASSWORD = 'arrowword2024';
 
@@ -109,11 +112,26 @@ function checkPwd(){
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('main').style.display='block';
     loadStats();
+    _staff.refresh();
   } else {
     document.getElementById('pwd-err').textContent='Incorrect password.';
     document.getElementById('pwd').value='';
   }
 }
+
+// v32: the admin signs in with Google; the page opens for admin accounts.
+// The password above still works as a backup for now.
+const _staff=setupStaffAccess({
+  box:document.querySelector('#lock-screen .lock-box'),
+  before:document.getElementById('pwd'),
+  allowed:['admin'],
+  isUnlocked:()=>document.getElementById('lock-screen').style.display==='none',
+  unlock:()=>{
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('main').style.display='block';
+    loadStats();
+  }
+});
 
 async function loadStats(){
   // Wait for supabase-auth.js to initialise

@@ -1,4 +1,7 @@
-// supabase-auth.js — v31
+// supabase-auth.js — v32
+// v32 - Added sbGetMyRole() (the signed-in person's role, with a clear error if
+//       it can't be read) and sbGetAccessToken() (lets database changes be
+//       made as the signed-in person).
 // v31 - Removed Facebook sign-in (no longer offered) and an unused comments
 //       loader. Removed the old Facebook mention from the header.
 // ══════════════════════════════════════════════════════════════════════════════
@@ -197,6 +200,31 @@ async function sbAdminGetAllComments() {
     .order('created_at', { ascending: false });
   if (error) { console.error('Admin comments query error:', error); return []; }
   return data || [];
+}
+
+// ── Signed-in person: role and sign-in token ──────────────────────────────────
+// Returns { role, error }. role is 'admin', 'builder', or 'user' when the
+// account has no role. error explains why the role could not be read.
+async function sbGetMyRole() {
+  if (!_sb) return { role: null, error: 'the sign-in service has not loaded' };
+  if (!_user) return { role: null, error: 'not signed in' };
+  try {
+    const { data, error } = await _sb.from('user_roles')
+      .select('role')
+      .eq('user_id', _user.id)
+      .maybeSingle();
+    if (error) return { role: null, error: error.message || String(error) };
+    return { role: (data && data.role) || 'user', error: null };
+  } catch (e) {
+    return { role: null, error: (e && e.message) || String(e) };
+  }
+}
+
+// The signed-in person's access token, or null when nobody is signed in.
+async function sbGetAccessToken() {
+  if (!_sb) return null;
+  const { data } = await _sb.auth.getSession();
+  return data && data.session ? data.session.access_token : null;
 }
 
 // ── Role API ──────────────────────────────────────────────────────────────────
