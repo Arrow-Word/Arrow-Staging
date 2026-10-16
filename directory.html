@@ -7,16 +7,18 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Directory — Arrow Word Puzzles</title>
-<meta name="aw-version" content="v33">
+<meta name="aw-version" content="v34">
 <script src="site-banner.js?v=33"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <!--
   Arrow Word Puzzles
   ══════════════════════════════════════════════════════
-  CURRENT VERSION: v33
+  CURRENT VERSION: v34
   ══════════════════════════════════════════════════════
   CHANGELOG:
+  v34 - Dates are shown in each visitor's own date format (they were always
+        shown South African style).
   v33 - Shows its version number in the bottom-right corner (click it for
         details and to check for a newer upload).
   v32 - Solved puzzles show the date they were solved.
@@ -202,7 +204,7 @@ main{max-width:1000px;margin:0 auto;padding:24px}
   </div>
 </div>
 
-<script src="cloud-storage.js?v=33"></script>
+<script src="cloud-storage.js?v=34"></script>
 <script src="supabase-auth.js?v=33"></script>
 <script>
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -420,7 +422,7 @@ function solvedMs(id) {
 }
 
 function shortDate(ms) {
-  return new Date(ms).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // When a puzzle was last played: from the account, or from this browser.

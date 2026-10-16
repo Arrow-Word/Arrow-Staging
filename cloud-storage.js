@@ -1,4 +1,6 @@
-// cloud-storage.js — v33
+// cloud-storage.js — v34
+// v34 - Publish dates are shown in each visitor's own date format; new
+//       puzzles store the date as YYYY-MM-DD instead of South African style.
 // v33 - Reports its version to the version badge (site-banner.js).
 // v32 - Publishing, changing and deleting puzzles are now done as the signed-in
 //       person (when the page has supabase-auth.js), so the database can check
@@ -9,7 +11,14 @@
 // Puzzle storage via Supabase — no tokens needed, works on any device.
 // v31 - Removed two unused functions, including cloudSavePuzzles, an old
 //       "delete every puzzle and re-add them" routine nothing called any more.
-(window.AW_FILES = window.AW_FILES || {})['cloud-storage.js'] = 'v33';
+(window.AW_FILES = window.AW_FILES || {})['cloud-storage.js'] = 'v34';
+
+// A publish date in the visitor's own format, e.g. "3 Oct 2026" or "Oct 3, 2026".
+function _awDate(ms, fallback) {
+  if (!ms) return fallback || '';
+  try { return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch (e) { return fallback || ''; }
+}
 
 const SUPABASE_URL  = 'https://bfpoiewwvtdczkmoqlye.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmcG9pZXd3dnRkY3prbW9xbHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4ODAxMTUsImV4cCI6MjA5MzQ1NjExNX0.EoIz2o7xg69tfAnSOp5wVusjc71s0cOmsEoSDwaxjso';
@@ -51,7 +60,7 @@ async function _sbGet(url) {
 async function cloudGetIndex() {
   const data = await _sbGet(SB_PUZZLES + '?select=id,title,published_at,published_at_ms,rows,cols&order=published_at_ms.desc');
   return (data || []).map(p => ({
-    id: p.id, title: p.title, publishedAt: p.published_at,
+    id: p.id, title: p.title, publishedAt: _awDate(p.published_at_ms, p.published_at),
     publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols
   }));
 }
@@ -61,20 +70,20 @@ async function cloudGetPuzzle(id) {
   const data = await _sbGet(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id) + '&select=*');
   if (!data || !data.length) return null;
   const p = data[0];
-  return { id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count };
+  return { id: p.id, title: p.title, publishedAt: _awDate(p.published_at_ms, p.published_at), publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count };
 }
 
 // All puzzles with full data
 async function cloudGetPuzzles() {
   const data = await _sbGet(SB_PUZZLES + '?select=*&order=published_at_ms.desc');
-  return (data || []).map(p => ({ id: p.id, title: p.title, publishedAt: p.published_at, publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count }));
+  return (data || []).map(p => ({ id: p.id, title: p.title, publishedAt: _awDate(p.published_at_ms, p.published_at), publishedAtMs: p.published_at_ms, rows: p.rows, cols: p.cols, data: p.data, answer_cell_count: p.answer_cell_count }));
 }
 
 async function cloudPublishPuzzle(title, data) {
   const existing = await _sbGet(SB_PUZZLES + '?title=eq.' + encodeURIComponent(title) + '&select=id');
   const id = (existing && existing.length) ? existing[0].id : ('p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7));
   const now = new Date();
-  const row = { id, title, published_at: now.toLocaleDateString('en-ZA'), published_at_ms: now.getTime(), rows: data.rows, cols: data.cols, data };
+  const row = { id, title, published_at: now.toISOString().slice(0, 10), published_at_ms: now.getTime(), rows: data.rows, cols: data.cols, data };
   const headers = await _sbWriteHeaders();
   if (existing && existing.length) {
     const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers, body: JSON.stringify(row) });
