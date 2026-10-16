@@ -1,4 +1,6 @@
-// cloud-storage.js — v34
+// cloud-storage.js — v35
+// v35 - Republishing an edited puzzle keeps its original publish date. Before,
+//       every republish (e.g. after a clue-fit fix) reset it to that day.
 // v34 - Publish dates are shown in each visitor's own date format; new
 //       puzzles store the date as YYYY-MM-DD instead of South African style.
 // v33 - Reports its version to the version badge (site-banner.js).
@@ -11,7 +13,7 @@
 // Puzzle storage via Supabase — no tokens needed, works on any device.
 // v31 - Removed two unused functions, including cloudSavePuzzles, an old
 //       "delete every puzzle and re-add them" routine nothing called any more.
-(window.AW_FILES = window.AW_FILES || {})['cloud-storage.js'] = 'v34';
+(window.AW_FILES = window.AW_FILES || {})['cloud-storage.js'] = 'v35';
 
 // A publish date in the visitor's own format, e.g. "3 Oct 2026" or "Oct 3, 2026".
 function _awDate(ms, fallback) {
@@ -86,7 +88,9 @@ async function cloudPublishPuzzle(title, data) {
   const row = { id, title, published_at: now.toISOString().slice(0, 10), published_at_ms: now.getTime(), rows: data.rows, cols: data.cols, data };
   const headers = await _sbWriteHeaders();
   if (existing && existing.length) {
-    const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers, body: JSON.stringify(row) });
+    // Updating a puzzle that is already published: keep its original publish date.
+    const update = { title, rows: data.rows, cols: data.cols, data };
+    const res = await fetch(SB_PUZZLES + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', headers, body: JSON.stringify(update) });
     await _sbCheckWrite(res, 'Update');
   } else {
     const res = await fetch(SB_PUZZLES, { method: 'POST', headers, body: JSON.stringify(row) });
